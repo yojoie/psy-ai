@@ -1,5 +1,26 @@
 <template>
-  <div>
-    后台布局
+  <div class="backend-layout">
+    <el-container>
+      <Siderbar />
+      <el-container>
+        <el-header>
+          <Navbar />
+        </el-header>
+        <el-main>
+          <router-view></router-view>
+        </el-main>
+      </el-container>
+    </el-container>
   </div>
 </template>
+
+<script setup>
+import Siderbar from './Siderbar.vue'
+import Navbar from './Navbar.vue'
+</script>
+
+<style lang="scss" scoped>
+.backend-layout {
+  height: 100vh;
+}
+</style>

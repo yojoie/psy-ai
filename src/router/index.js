@@ -5,8 +5,14 @@ import BackendLayout from '@/components/BackendLayout.vue'
 const backendRoutes = [
   {
     path: '/back',
-    name: 'Home',
-    component: BackendLayout
+    component: BackendLayout,
+    //子路由
+    children: [
+      {
+        path: 'dashboard',
+        component: () => import('@/views/dashboard.vue')
+      }
+    ]
   }]
 
 //创建路由实例
