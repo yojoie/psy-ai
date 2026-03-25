@@ -1,6 +1,6 @@
 <template>
   <div class="backend-layout">
-    <el-container>
+    <el-container class="main-container">
       <Siderbar />
       <el-container>
         <el-header>
@@ -23,5 +23,9 @@ import Navbar from './Navbar.vue'
 <style lang="scss" scoped>
 .backend-layout {
   height: 100vh;
+  //继承父元素高度
+  .main-container {
+    height: 100%;
+  }
 }
 </style>
