@@ -14,8 +14,9 @@
   </div>
 </template>
 
+
 <script setup>
-import Siderbar from './Siderbar.vue'
+import Siderbar from './Sidebar.vue'
 import Navbar from './Navbar.vue'
 </script>
 

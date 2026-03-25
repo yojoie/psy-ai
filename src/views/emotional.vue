@@ -1,5 +1,7 @@
 <template>
   <div>
-    菜单区域
+   <h1>
+    情绪日志
+   </h1>
   </div>
 </template>
