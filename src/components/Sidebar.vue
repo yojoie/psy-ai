@@ -2,8 +2,6 @@
   <!--侧边栏-->
   <el-aside width="264px">
     <el-menu
-        @open="handleOpen"
-        @close="handleClose"
         class="menu-style"
       >
       <!-- 侧边栏顶部logo -->
@@ -16,7 +14,7 @@
       </div>
       <!-- 侧边栏菜单 -->
         <!-- 遍历路由配置中的子路由 -->
-        <el-menu-item v-for="item in router.options.routes[0].children" :key="item.path" :index="item.path">
+        <el-menu-item @click="selectMenu" v-for="item in router.options.routes[0].children" :key="item.path" :index="item.path">
           <!--动态渲染图标-->
           <el-icon><component :is="item.meta.icon" /></el-icon>
           <span>{{item.meta.title}}</span>
@@ -25,6 +23,7 @@
   </el-aside>
 </template>
 
+
 <script setup>
 // 引入路由模块
 import { useRouter } from 'vue-router';
@@ -32,13 +31,15 @@ const router = useRouter();
 // 引入机器人图标，保障打包之后的路径没有问题
 const iconUrl = new URL('@/assets/images/机器人.png',import.meta.url).href
 console.log(router,'router');
-// 处理打开侧边栏事件
-const handleOpen = () => {
-  
-}
-const handleClose = () => {
-  
-}
+// 处理点击菜单事件，key为点击的菜单路径，默认传入的是index
+const selectMenu = (key) => {
+  console.log(key,'key')
+  const currentRoute = router.options.routes[0]
+  //动态拼接二级路由路径
+  console.log(`${currentRoute.path}/${key}`)//点击菜单后，拼接当前路由路径和点击的菜单路径，形成完整的路由
+  router.push(`${currentRoute.path}/${key}`)//点击菜单后，跳转到对应的路由   
+  }
+
 </script>
 
 <style lang="scss" scoped>

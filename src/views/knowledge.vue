@@ -1,7 +1,15 @@
 <template>
   <div>
-   <h1>
-    知识文章
-   </h1>
+    <PageHead title="知识文章">
+      <!-- 把按钮插槽 -->
+      <template #buttons>
+        <el-button type="primary">新增</el-button>
+        <el-button type="primary">编辑</el-button>
+      </template>
+    </PageHead>
   </div>
 </template>
+
+<script setup>
+import PageHead from '@/components/PageHead.vue'
+</script>
