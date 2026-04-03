@@ -3,9 +3,9 @@
   <div class="navbar">
     <!-- 左侧 -->
     <div class="flexbox">
-      <!-- 按钮 -->
-      <el-button>
-        <el-icon><Expand /></el-icon>
+      <!-- 按钮，建立一个点击方法-->
+      <el-button @click="handleCollapse">
+        <el-icon><component :is="isCollapse ? Expand : Fold" /></el-icon>
       </el-button>
       <p class="page-title">心理咨询系统</p>
     </div>
@@ -32,14 +32,26 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { Expand, ArrowDown } from '@element-plus/icons-vue';
-//监听下拉菜单点击事件
+<script setup>
+import { computed } from 'vue';
+import { useAdminStore } from '@/stores/admin';
+import { Expand, ArrowDown, Fold } from '@element-plus/icons-vue';
+
+const adminStore = useAdminStore()
+const isCollapse = computed(() => adminStore.isCollapse)
+
 const handleCommand = (command) => {
   if(command === 'logout'){
-    // 退出登录
   }
 }
+
+const handleCollapse = () => {
+  const toggle = adminStore.toggleCollapse || adminStore.toggleCollapsed
+  if (typeof toggle === 'function') {
+    toggle()
+  }
+}
+
 </script>
 
 <style lang="scss" scoped>
