@@ -21,7 +21,8 @@ const formItem = [
   options:[{label:'心理健康基础',value:1},{label:'情绪管理',value:2}]}
 ]
 
-const handleSearch = () => {
+const handleSearch = (formData) => {
+  console.log(formData)
 }
 
 

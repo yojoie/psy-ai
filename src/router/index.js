@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory, matchedRouteKey } from 'vue-router'
 import BackendLayout from '@/components/BackendLayout.vue'
+import AuthLayout from '@/components/AuthLayout.vue'
 
 //路由配置
 
 //后台
 const backendRoutes = [
+  //后台功能
   {
     path: '/back',
     component: BackendLayout,
@@ -42,12 +44,39 @@ const backendRoutes = [
           title: '情绪日志',
           icon: 'User'
         }
+      }]
+  },
+  //用户健全
+  {
+    //父级路由
+    path: '/auth',
+    component: AuthLayout,
+    //子路由
+    children: [
+      {
+        path: 'login',
+        component: () => import('@/views/login.vue'),
+        meta: {
+          title: '登录'
+        }
       }
+      ,
+      {
+        path: 'register',
+        component: () => import('@/views/register.vue'),
 
-
-
+        meta: {
+          title: '注册'
+        }
+      }
     ]
-  }]
+
+  }
+
+
+
+]
+
 
 //创建路由实例
 const router = createRouter({
