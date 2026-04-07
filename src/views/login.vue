@@ -25,7 +25,7 @@
           <el-button class="btn" type="primary" size="large" @click="submitForm">登录账户</el-button>
         </el-form>
         <div class="footer">
-          <p>还没有账户？<router-link to="/register">去注册</router-link></p>
+          <p>还没有账户？<router-link to="/auth/register">去注册</router-link></p>
         </div>
       </div>
     </div>
@@ -35,7 +35,11 @@
 
 <script setup>
 import { ref ,reactive} from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { login } from "@/api/admin";
 
+const router = useRouter()
 const ruleFormRef = ref()
 const formData = reactive({
   // 按照接口文档的字段名定义
@@ -44,6 +48,7 @@ const formData = reactive({
 })
 
 const rules = reactive({
+  //用户名这一项不能为空；当用户离开输入框时，如果还是空的，就提示“请输入用户名或邮箱”。
   username: [
     { required: true, message: '请输入用户名或邮箱', trigger: 'blur' }
   ],
@@ -53,13 +58,27 @@ const rules = reactive({
 })
 
 //登录
-const submitForm = async (formEl) => {
+const submitForm = async () => {
+  const formEl = ruleFormRef.value
   //如果表单为空，直接返回
   if(!formEl) return
   await formEl.validate((valid,fields) => {
     if(valid){
       //登录成功，调用接口登录，登录成功后，跳转到首页，登录失败，提示用户
-      console.log('登录成功', fields)
+      login(formData).then(data => {
+        //判断token是否存在
+        if(data.token){
+          //登录成功，将token存储到localStorage中
+          localStorage.setItem('token',data.token)
+          //登录成功，将用户名存储到localStorage中
+          localStorage.setItem('userInfo',JSON.stringify(data))
+          //跳转到首页
+          router.push('/back/dashboard')
+        }else{
+          //登录失败，提示用户
+          ElMessage.error(data.msg||'登录失败')
+        }
+      })
     }
   })
 }
