@@ -10,7 +10,7 @@ const service = axios.create({
 
 //请求拦截器
 service.interceptors.request.use(
-  config => {
+  (config) => {
     // 在发送请求之前做些什么
     //获取token
     const token = localStorage.getItem('token')
@@ -19,7 +19,7 @@ service.interceptors.request.use(
     }
     return config
   },
-  error => {
+  (error) => {
     // 对请求错误做些什么
     return Promise.reject(error)
   }
@@ -27,11 +27,11 @@ service.interceptors.request.use(
 
 //响应拦截器，请求完成后的处理
 service.interceptors.response.use(
-  response => {
+  (response) => {
     // 对响应数据做点什么
     const { data, config } = response
     //处理业务状态码
-    if (data.code === 200) {
+    if (data.code === '200') {
       return data.data
     } else {
       if (data.code === '-1') {//用户超时，登录过期

@@ -22,7 +22,7 @@
           <el-form-item label="密码" prop="password">
             <el-input v-model="formData.password" size="large" placeholder="请输入密码" type="password" show-password></el-input>
           </el-form-item>
-          <el-button class="btn" type="primary" size="large" @click="submitForm">登录账户</el-button>
+          <el-button class="btn" type="primary" size="large" @click="submitForm(ruleFormRef)">登录账户</el-button>
         </el-form>
         <div class="footer">
           <p>还没有账户？<router-link to="/auth/register">去注册</router-link></p>
@@ -58,26 +58,26 @@ const rules = reactive({
 })
 
 //登录
-const submitForm = async () => {
-  const formEl = ruleFormRef.value
+const submitForm = async (formEl) => {
   //如果表单为空，直接返回
   if(!formEl) return
   await formEl.validate((valid,fields) => {
     if(valid){
+      console.log(fields)
       //登录成功，调用接口登录，登录成功后，跳转到首页，登录失败，提示用户
       login(formData).then(data => {
         //判断token是否存在
-        if(data.token){
+        if(!data.token){
+          //登录失败
+          return console.error('登录失败')
+        }
           //登录成功，将token存储到localStorage中
           localStorage.setItem('token',data.token)
           //登录成功，将用户名存储到localStorage中
-          localStorage.setItem('userInfo',JSON.stringify(data))
+          localStorage.setItem('userInfo',JSON.stringify(data.userInfo))
           //跳转到首页
           router.push('/back/dashboard')
-        }else{
-          //登录失败，提示用户
-          ElMessage.error(data.msg||'登录失败')
-        }
+          console.log('登录成功')
       })
     }
   })
