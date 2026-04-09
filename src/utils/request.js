@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 
 
 //创建axios实例
@@ -7,6 +8,9 @@ const service = axios.create({
   baseURL: '/api',//请求前缀
   timeout: 5000//请求超时时间
 })
+
+//创建路由实例
+const router = useRouter()
 
 //请求拦截器
 service.interceptors.request.use(
@@ -41,7 +45,15 @@ service.interceptors.response.use(
           localStorage.removeItem('token')
           localStorage.removeItem('userInfo')
           //跳转到登录页
-          window.location.href = '/auth/login'
+          //如果是后台账号类型
+          if (data.userInfo.userType === 2) {
+            router.push('/back/dashboard')
+          } else {
+            //如果是普通用户账号类型
+
+          }
+
+
         } else {
           //其他错误
           ElMessage.error(data.msg || '登录失败')
