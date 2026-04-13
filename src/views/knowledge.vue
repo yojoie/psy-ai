@@ -3,8 +3,7 @@
     <PageHead title="知识文章">
       <!-- 把按钮插槽 -->
       <template #buttons>
-        <el-button type="primary">新增</el-button>
-        <el-button type="primary">编辑</el-button>
+        <el-button @click="dialogVisible = true" type="primary">新增</el-button>
       </template>
     </PageHead>
     <TableSearch :form-item="formItem" @search="handleSearch" />
@@ -50,6 +49,9 @@
       :page-size="pagination.size"
       @change="handleChange"
     />
+    <!-- 文章详情弹窗 -->
+    <ArticleDialog v-model:modelValue="dialogVisible" :categories="categories" />
+
    </div>
 </template>
 
@@ -58,6 +60,11 @@ import { getCategoryTree, articlePage } from '@/api/admin'
 import { onMounted, ref, reactive, } from 'vue'
 import PageHead from '@/components/PageHead.vue'
 import TableSearch from '@/components/TableSearch.vue'
+import ArticleDialog from '@/components/ArticleDialog.vue'
+
+//弹窗是否显示
+const dialogVisible = ref(false)
+
 const tableData = ref([]) 
 const formItem = [
   { comp:'input', prop:'title', label:'文章标题',placeholder:'请输入文章标题'},
