@@ -28,7 +28,7 @@
 
       <el-table-column label="作者" width="150" prop="authorName"/>
       <el-table-column label="阅读量" width="150" prop="readCount"/>
-      <el-table-column label="发布时间" width="150" prop="publishedAt"/>
+      <el-table-column label="发布时间" width="150" prop="updatedAt"/>
       
        <el-table-column label="操作" width="240" fixed="right">
         <template #default="scope">
@@ -64,6 +64,8 @@ import ArticleDialog from '@/components/ArticleDialog.vue'
 
 //弹窗是否显示
 const dialogVisible = ref(false)
+const handleSuccess = () => {
+}
 
 const tableData = ref([]) 
 const formItem = [

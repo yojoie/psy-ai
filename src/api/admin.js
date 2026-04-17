@@ -20,3 +20,7 @@ export function uploadFile(file, businessTypeInfo) {
   formData.append('businessField', 'cover')
   return service.post('/file/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
+
+export function createdArticle(data) {
+  return service.post('/knowledge/article', data)
+}

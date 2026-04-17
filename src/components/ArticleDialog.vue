@@ -40,21 +40,42 @@
             </div>
           </el-upload>
           <div v-if="imgUrl" class="cover-remove">
-            <el-button type="danger" size="mini" @click="handleRemove">移除封面</el-button>
+            <el-button type="danger" size="small" @click="handleRemove">移除封面</el-button>
           </div>
         </div>
       </el-form-item>
+      <el-form-item label="文章内容" prop="content">
+        <RichTextEditor
+            v-model="formData.content"
+            placeholder="请输入文章内容,支持富文本格式,可以使用加粗、斜体、列表、标题等格式来丰富文章内容"
+            :maxCharCount="5000"
+            min-height="400px"
+            @change="handleContentChange"
+            @created="handleEditorCreate"
+             />
+      </el-form-item>
     </el-form>
+    <div v-if="btnPreview">
+      <h3>预览效果</h3>
+      <div v-html="formData.content">
+      </div>
+    </div>
+    <template #footer>
+      <el-button @click="btnPreview=!btnPreview">{{btnPreview?'关闭预览':'预览效果'}}</el-button>
+      <el-button type="danger" @click="handleClose">取消</el-button>
+      <el-button type="primary" @click="handleSubmit" :loading="loading" @success="handleSuccess">创建文章</el-button>
+    </template>
   </el-dialog>
 
 </template>
 
 <script setup>
-import { id } from 'element-plus/es/locale/index.mjs'
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive ,nextTick} from 'vue'
 import { ElMessage } from 'element-plus'
 import { uploadFile } from '@/api/admin'
 import { fileBaseUrl } from '@/config/index.js'
+import RichTextEditor from './RichTextEditor.vue'
+import { createdArticle } from '@/api/admin'
 
 //上传图片
 const imgUrl = ref('')
@@ -69,7 +90,7 @@ const props= defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue','success'])
 
 const dialogVisible = computed({
   get(){
@@ -99,8 +120,13 @@ const rules = reactive({
   title: [
     { required: true, message: '请输入文章标题', trigger: 'blur' }
   ],
-  categoryID: [
+  categoryId: [
     { required: true, message: '请选择分类', trigger: 'change' }
+  ],
+  content: [
+    { required: true, message: '请输入文章内容', trigger: 'blur' }
+    ,
+    { max: 5000, message: '文章内容长度不能超过5000个字符', trigger: 'blur' }
   ],
 })
 
@@ -139,8 +165,51 @@ const handleUploadRequest = async ({ file }) => {
 const handleRemove = () => {
   imgUrl.value = ''
   formData.coverImage = ''
-}  
-  
+} 
+//处理文章内容变化
+const handleContentChange = (data) => {
+  formData.content = data.html
+}
+
+const editorInstance= ref(null)
+//处理富文本编辑器创建
+const handleEditorCreate = (editor) => {
+  editorInstance.value = editor
+  //编辑
+  if(formData.content&&editor){
+    nextTick(()=>{
+      editor.setHtml(formData.content)
+    })
+  }
+}
+
+const btnPreview = ref(false)
+
+//提交文章
+const formRef = ref(null)
+const loading = ref(false)
+
+const handleSubmit = () => {
+  formRef.value.validate((valid, fields) => {
+    if (valid) {
+      loading.value = true
+    }
+    console.log(formData)
+    const submitData={
+      ...formData,
+      tags:formData.tagArray.join(',')
+    }
+    delete submitData.tagArray
+
+    createdArticle(submitData).then(res=>{
+      loading.value = false
+    emit('success')
+   
+    })
+    console.log(submitData)
+   })
+}
+
 </script>
 
 <style lang="scss" scoped>
