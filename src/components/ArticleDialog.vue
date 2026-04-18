@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    title="文章详情"
+    :title="isEdit?'编辑文章':'新增文章'"
     v-model="dialogVisible"
     width="50%"
     @close="handleClose"
@@ -63,19 +63,20 @@
     <template #footer>
       <el-button @click="btnPreview=!btnPreview">{{btnPreview?'关闭预览':'预览效果'}}</el-button>
       <el-button type="danger" @click="handleClose">取消</el-button>
-      <el-button type="primary" @click="handleSubmit" :loading="loading" @success="handleSuccess">创建文章</el-button>
+      <el-button type="primary" @click="handleSubmit" :loading="loading">{{isEdit?'更新':'创建'}}文章</el-button>
     </template>
   </el-dialog>
 
 </template>
 
 <script setup>
-import { ref, computed, reactive ,nextTick} from 'vue'
+import { ref, computed, reactive ,nextTick,watch} from 'vue'
 import { ElMessage } from 'element-plus'
 import { uploadFile } from '@/api/admin'
 import { fileBaseUrl } from '@/config/index.js'
 import RichTextEditor from './RichTextEditor.vue'
-import { createdArticle } from '@/api/admin'
+import { createdArticle,updateArticle } from '@/api/admin'
+import { NULL } from 'sass'
 
 //上传图片
 const imgUrl = ref('')
@@ -87,6 +88,10 @@ const props= defineProps({
   categories: {
     type: Array,
     default: () => []
+  },
+  article: {
+    type: Object,
+    default: null
   }
 })
 
@@ -100,10 +105,34 @@ const dialogVisible = computed({
     emit('update:modelValue', val)
   }
 })
-  
+
+const isEdit = computed(()=>!!props.article?.id)
+
+//监听编辑数据变化
+watch(()=>props.article,(newVal,oldVal)=>{
+  if(newVal){
+    nextTick(()=>{
+      //将编辑数据重新赋值给formData
+      Object.assign(formData,newVal)
+      //使用id
+      businessId.value = newVal.id
+      //封面url
+      imgUrl.value = `${fileBaseUrl}${newVal.coverImage}`
+    })
+  }
+})
+
 //关闭弹窗
 const handleClose = () => {
-  dialogVisible.value = false
+  //重置表单
+  formRef.value.resetFields()
+  //重置封面url和数据
+  handleRemove()
+  //重置bsid
+  businessId.value = null
+  //重置tags
+  formData.tagArray = []
+  emit('update:modelValue',false)
 }
 
 const formData = reactive({
@@ -148,13 +177,14 @@ const beforeUpload = (file) => {
   return true
   // 上传前的校验
 }
-  
+
+const businessId = ref(null)
 const handleUploadRequest = async ({ file }) => {
   //uuid生成
-  const businessId = crypto.randomUUID()
+  businessId.value = crypto.randomUUID()
   //上传文件
   const fileRes = await uploadFile(file,{
-    businessId:businessId
+    businessId:businessId.value
   })
   //拼接图片URL
   imgUrl.value = `${fileBaseUrl}${fileRes.filePath}`
@@ -191,23 +221,31 @@ const loading = ref(false)
 
 const handleSubmit = () => {
   formRef.value.validate((valid, fields) => {
-    if (valid) {
-      loading.value = true
-    }
-    console.log(formData)
-    const submitData={
+    if (!valid) return
+
+    loading.value = true
+
+    const submitData = {
       ...formData,
-      tags:formData.tagArray.join(',')
+      tags: formData.tagArray.join(',')
     }
     delete submitData.tagArray
 
-    createdArticle(submitData).then(res=>{
-      loading.value = false
-    emit('success')
-   
-    })
-    console.log(submitData)
-   })
+    if (!isEdit.value) {
+      // 新增
+      submitData.id = businessId.value
+      createdArticle(submitData).then(res => {
+        loading.value = false
+        emit('success')
+      })
+    } else {
+      // 编辑
+      updateArticle(props.article.id, submitData).then(res => {
+        loading.value = false
+        emit('success')
+      })
+    }
+  })
 }
 
 </script>

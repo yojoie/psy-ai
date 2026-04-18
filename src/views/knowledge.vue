@@ -3,7 +3,7 @@
     <PageHead title="知识文章">
       <!-- 把按钮插槽 -->
       <template #buttons>
-        <el-button @click="dialogVisible = true" type="primary">新增</el-button>
+        <el-button @click="handleEdit({})" type="primary">新增</el-button>
       </template>
     </PageHead>
     <TableSearch :form-item="formItem" @search="handleSearch" />
@@ -32,10 +32,10 @@
       
        <el-table-column label="操作" width="240" fixed="right">
         <template #default="scope">
-          <el-button text type="primary">编辑</el-button>
-          <el-button v-if="scope.row.status === 0||scope.row.status === 2" text type="success">发布</el-button>
-          <el-button v-if="scope.row.status === 1" text type="warning">下线</el-button>
-          <el-button text type="danger">删除</el-button>
+          <el-button @click="handleEdit(scope.row)" text type="primary">编辑</el-button>
+          <el-button @click="handlePublish(scope.row)" v-if="scope.row.status === 0||scope.row.status === 2" text type="success">发布</el-button>
+          <el-button @click="handleUnpublish(scope.row)" v-if="scope.row.status === 1" text type="warning">下线</el-button>
+          <el-button @click="handleDelete(scope.row)" text type="danger">删除</el-button>
         </template>  
       </el-table-column>
        
@@ -50,21 +50,111 @@
       @change="handleChange"
     />
     <!-- 文章详情弹窗 -->
-    <ArticleDialog v-model:modelValue="dialogVisible" :categories="categories" />
+    <ArticleDialog v-model:modelValue="dialogVisible" :article="currentArticle" :categories="categories" @success="handleSuccess" />
 
    </div>
 </template>
 
 <script setup>
-import { getCategoryTree, articlePage } from '@/api/admin'
-import { onMounted, ref, reactive, } from 'vue'
+import { getCategoryTree, articlePage, getArticleDetail } from '@/api/admin'
+import { onMounted, ref, reactive, watch } from 'vue'
 import PageHead from '@/components/PageHead.vue'
 import TableSearch from '@/components/TableSearch.vue'
 import ArticleDialog from '@/components/ArticleDialog.vue'
+import {deleteArticle, changeArticleStatus } from '@/api/admin'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 //弹窗是否显示
 const dialogVisible = ref(false)
+const currentArticle = ref(null)
+
+//新增或编辑成功后，刷新列表
 const handleSuccess = () => {
+  //关闭弹窗
+  dialogVisible.value = false
+  //刷新列表
+  handleSearch({})
+}
+
+//编辑
+const handleEdit = (row) => {
+  if(!row.id){
+    //新增
+    currentArticle.value = null
+    dialogVisible.value = true
+  }
+  else{
+    //编辑
+    getArticleDetail(row.id).then(res=>{
+    currentArticle.value = res
+    dialogVisible.value = true
+  })} 
+}
+
+//发布
+const handlePublish = (row) => {
+  //二次确认
+  ElMessageBox.confirm(
+    `确认发布文章${row.title}吗？`,
+    '提示',
+    {
+      confirmButtonText: '确定发布',
+      cancelButtonText: '取消',
+      type: 'info'
+    }
+  ).then(() => {
+    //发布文章
+    changeArticleStatus(row.id, { status: 1 }).then(res=>{
+        //发布成功
+        ElMessage.success('发布成功')
+        //刷新列表
+        handleSearch({})
+    })
+  })
+}
+
+//下线
+const handleUnpublish = (row) => {
+  //二次确认
+  ElMessageBox.confirm(
+    `确认下线文章${row.title}吗？`,
+    '提示',
+    {
+      confirmButtonText: '确定下线',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    //下线文章
+    changeArticleStatus(row.id, { status: 2 }).then(res=>{
+        //下线成功
+        ElMessage.success('下线成功')
+        //刷新列表
+        handleSearch({})
+    })
+  })
+}
+
+//删除
+const handleDelete = (row) => {
+ //二次确认
+  ElMessageBox.confirm(
+    `确认删除文章${row.title}吗？`,
+    '提示',
+    {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'danger'
+    }
+  ).then(() => {
+    //删除文章
+    deleteArticle(row.id).then(res=>{
+        //删除成功
+        ElMessage.success('删除成功')
+        //刷新列表
+        handleSearch({})
+    })
+  })
 }
 
 const tableData = ref([]) 
