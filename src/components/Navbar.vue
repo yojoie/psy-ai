@@ -7,7 +7,7 @@
       <el-button @click="handleCollapse">
         <el-icon><component :is="isCollapse ? Expand : Fold" /></el-icon>
       </el-button>
-      <p class="page-title">心理咨询系统</p>
+      <p class="page-title">{{ route.meta.title }}</p>
     </div>
     <!-- 右侧 -->
     <div class="flexbox">
@@ -36,13 +36,33 @@
 import { computed } from 'vue';
 import { useAdminStore } from '@/stores/admin';
 import { Expand, ArrowDown, Fold } from '@element-plus/icons-vue';
+import { useRouter,useRoute } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { logout } from '@/api/admin';
+
+const route= useRoute()
+const router= useRouter()
 
 const adminStore = useAdminStore()
 const isCollapse = computed(() => adminStore.isCollapse)
 
 const handleCommand = (command) => {
   if(command === 'logout'){
-  }
+    //登出提示
+    ElMessageBox.confirm('确定退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      //登出
+      logout().then(() => {
+        //清除缓存
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        router.push('/auth/login')
+      })
+    })
+}
 }
 
 const handleCollapse = () => {

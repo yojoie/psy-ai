@@ -9,6 +9,7 @@ const backendRoutes = [
   //后台功能
   {
     path: '/back',
+    redirect: '/back/dashboard',
     component: BackendLayout,
     //子路由
     children: [
@@ -84,6 +85,41 @@ const router = createRouter({
   history: createWebHistory(),
   routes: backendRoutes
 })
+
+//路由前置守卫
+router.beforeEach((to, from, next) => {
+  //检查是否登录
+  const token = localStorage.getItem('token')
+  if (token) {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    //后台用户
+    if (userInfo.userType == 2) {
+      if (to.path.startsWith('/back')) {
+        next()
+      }
+      else {
+        next('/back/dashboard')
+      }
+    }
+    //前台用户
+    else if (userInfo.userType == 1) {
+
+    }
+
+
+  } else {
+    //未登录
+    //如果是跳转后台，返回登录页面
+    if (to.path.startsWith('/back')) {
+      next('/auth/login')
+    } else {
+      //重定向到登录页
+      next()
+    }
+
+  }
+})
+
 
 //导出路由实例
 export default router
