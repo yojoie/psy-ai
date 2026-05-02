@@ -46,12 +46,13 @@ service.interceptors.response.use(
           localStorage.removeItem('userInfo')
           //跳转到登录页
           //如果是后台账号类型
-          if (data.userInfo.userType === 2) {
+          if (data.userType === 2) {
             router.push('/back/dashboard')
           } else {
             //如果是普通用户账号类型
 
           }
+
 
 
         } else {

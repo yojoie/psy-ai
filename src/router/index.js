@@ -128,12 +128,17 @@ router.beforeEach((to, from, next) => {
         next('/back/dashboard')
       }
     }
-    //前台用户
+    //前台用户，只能访问前台页面
     else if (userInfo.userType == 1) {
-
+      //已登录的要访问后台页面，重定向到首页
+      if (to.path.startsWith('/back') || to.path.startsWith('/auth')) {
+        next('/')
+      }
+      //其他页面，直接放行
+      else {
+        next()
+      }
     }
-
-
   } else {
     //未登录
     //如果是跳转后台，返回登录页面

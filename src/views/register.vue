@@ -36,8 +36,12 @@
 
 <script setup>
 import { ref ,reactive} from 'vue';
+import { register } from '@/api/frontend'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 
-const formData = ref({
+
+const formData = reactive({
     "username": "",
     "email": "",
     "nickname": "",
@@ -64,15 +68,19 @@ const rules = reactive({
 })
 
 const submitFormRef = ref(null);
-
-const submitForm = async (formEl) => {
-    if (!formEl) {
-        return;
-    }
+const router = useRouter()
+const submitForm =  (formEl) => {
+    if (!formEl) return;
     formEl.validate((valid) => {
-        if (valid) {
-            console.log(formData.value);
-        }
+        register(formData).then(({data})=>{
+          if(!data){
+            ElMessage.success('注册成功');
+            router.push('/auth/login');
+          }
+          if(data.code==="BUSINESS_ERROR"){
+            ElMessage.error(data.message);
+          }
+        });
     });
 }
 

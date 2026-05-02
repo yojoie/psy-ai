@@ -10,7 +10,7 @@
         <router-link class="nav-link" to="/consultation" v-if="isLoggedIn">AI咨询</router-link>
         <router-link class="nav-link" to="/emotion-diary" v-if="isLoggedIn">情绪日记</router-link>
         <router-link class="nav-link" to="/knowledge">知识库</router-link>
-        <el-button class="logout-btn" v-if="isLoggedIn">退出登录</el-button>
+        <el-button class="logout-btn" v-if="isLoggedIn" @click="handleLogout">退出登录</el-button>
         <template v-else>
           <router-link class="nav-link" to="/auth/login">登录</router-link>
           <router-link class="nav-link" to="/auth/register">
@@ -32,6 +32,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { logout } from '@/api/admin'
+import {useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const iconUrl = new URL('@/assets/images/机器人.png', import.meta.url).href
 const isLoggedIn = ref(false)
@@ -39,6 +43,18 @@ const isLoggedIn = ref(false)
 onMounted(() => {
     isLoggedIn.value = localStorage.getItem('token') !== null
 })
+
+//用户端登出
+const handleLogout = () => {
+    logout().then(() => {
+        //登出成功，清空localStorage中的token和userInfo
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        //登出成功，跳转到登录页面
+        router.push('/auth/login')
+    })
+}
+ 
 </script>
 
 <style lang="scss" scoped>

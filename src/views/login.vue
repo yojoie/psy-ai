@@ -75,8 +75,12 @@ const submitForm = async (formEl) => {
           localStorage.setItem('token',data.token)
           //登录成功，将用户名存储到localStorage中
           localStorage.setItem('userInfo',JSON.stringify(data.userInfo))
-          //跳转到首页
-          router.push('/back/dashboard')
+          //根据用户角色跳转不同的页面
+          if(data.userInfo.userType === 2){
+            router.push('/back/dashboard')
+          }else{
+            router.push('/')
+          }
           console.log('登录成功')
       })
     }
