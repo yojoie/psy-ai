@@ -12,6 +12,46 @@
             在线服务中
           </div>
         </div>
+        <!-- 会话列表 -->
+        <div class="session-history">
+          <h4 class="session-title">会话历史</h4>
+          <div class="session-list">
+            <div v-for="session in sessionList" :key="session.id" class="session-item" @click="handleSessionClick(session)">
+              <div class="session-info">
+                <div class="session-title">
+                    <span>{{ session.sessionTitle }}</span>
+                    <div class="session-meta">
+                        <span class="session-time">{{ session.startedAt }}</span>
+                    </div>
+                    <div class="session-preview">
+                        <span>{{ session.lastMessageContent }}</span>
+                    </div>
+                    <div class="session-stats">
+                        <span>
+                            <el-icon>
+                                <ChatRound />
+                            </el-icon>
+                        </span>
+                        <span >{{ session.messageCount || 0 }}</span>
+                        <span>
+                            <el-icon>
+                                <Clock />
+                            </el-icon>
+                        </span>
+                        <span>{{ session.durationMinutes || 0 }}分钟前</span>
+                    </div>                    
+                </div>
+                <div class="session-actions">
+                    <el-button text type="danger" size="mini" @click="handleDeleteClick(session)">
+                        <el-icon>
+                            <DeleteFilled />
+                        </el-icon>
+                    </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
     <div class="chat-main">
       <div class="chat-header">
@@ -72,43 +112,127 @@
 </template>
 
 <script setup>
-import { createApp, ref } from 'vue'
-import { startSession } from '@/api/frontend'
-import { isTemplate } from 'element-plus/es/utils/index.mjs'
+import {  ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { startSession, getSessionList } from '@/api/frontend'
 
 const isAiTyping = ref(false)
 const iconUrl =new URL('@/assets/images/robot-fill.png', import.meta.url).href
 const iconUrl1 =new URL('@/assets/images/like.png', import.meta.url).href
+//用户输入消息
+const userMessage= ref('')
+//定义当前会话对象(页面现在打开的对话)
+const currentSession = ref(null)
+//定义会话列表
+const sessionList = ref([])
 
-
-//新建对话
+//新建前端临时会话
 const createNewFrontendSession = () => {
   //新建新会话对象
   const newSession = {
-    sesstionId:'temp_'+Date.now(),
+    sessionId:'temp_'+Date.now(),
     status:'TEMP',
-    sesstionTitle:'新对话'
+    sessionTitle:'新对话'
   }
   //将新会话对象赋值给currentSession
   currentSession.value = newSession
 }
 
-//定义当前会话对象
-const currentSession = ref(null)
-
-//用户输入消息
-const userMessage= ref('')
-
 //处理键盘事件
 const handleKeydown = (e) => {
-    if (e.key === 'Enter' && !isAiTyping.value) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
         sendMessage()
     }
 }
 
+//发送消息
+const sendMessage = () => {
+    //如果用户输入为空，不允许发送消息
+    if (userMessage.value.trim() === '') return
+    //如果AI助手正在思考中，不允许发送消息
+    if(isAiTyping.value) {
+        ElMessage.error('思考中，请稍后再发送')
+        return
+    }
+    const message = userMessage.value.trim()
+    //清空输入框
+    userMessage.value = ''
+    //如果是新建会话/临时会话，创建新会话
+    if(currentSession.value.status === 'TEMP') {
+        startNewSession(message)
+    }
+}
+
+
+//创建新会话
+const startNewSession = (message) => {
+    //新建传给后端的参数
+    const sessionParams = {
+        //初始消息
+        initialMessage:message,
+    }
+    //根据会话标题新旧，设置会话标题
+    if(currentSession.value.sessionTitle==='新对话') {
+        sessionParams.sessionTitle=`AI助手-${new Date().toLocaleString()}`
+    } else {
+        //历史记录
+        sessionParams.sessionTitle=currentSession.value.sessionTitle
+    }
+    //调用创建会话接口
+    startSession(sessionParams).then(res => {
+        //后端返回的数据转回前端格式:后端真正创建成功后返回的新会话数据
+        const sessionData = {
+            sessionId:res.sessionId,
+            status:res.status,
+            sessionTitle: sessionParams.sessionTitle
+        }
+        //临时会话，更新信息
+        if(currentSession.value&&currentSession.value.status === 'TEMP') {
+            Object.assign(currentSession.value,sessionData)
+        }else{
+            //历史记录，新建新会话
+            currentSession.value = sessionData
+        }
+    })
+    //更新会话列表
+    getSessionPage()
+}
+
+//获取会话列表
+const getSessionPage = () => {
+    //调用获取会话列表接口
+    getSessionList({
+        pageNum:1,
+        pageSize:10
+    }).then(res => {
+        //将后端返回的会话列表赋值给sessionList
+        sessionList.value = res.records
+    })
+}
+
+//处理会话点击事件
+const handleSessionClick = (session) => {
+    //将点击的会话赋值给currentSession
+    currentSession.value = session
+}
+
+//处理删除会话事件
+const handleDeleteClick = (session) => {
+    //调用删除会话接口
+    deleteSession(session.sessionId).then(res => {
+        //删除成功后，刷新会话列表
+        getSessionPage()
+        //删除成功后，将currentSession设置为null
+        currentSession.value = null
+    })
+}
+
 onMounted(() => {
-  //页面加载时，新建一个新会话
-  createNewFrontendSession()
+    //获取会话列表
+    getSessionPage()   
+    //页面加载时，新建一个新会话
+    createNewFrontendSession()
 })
 
 // 对话消息

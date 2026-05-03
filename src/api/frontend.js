@@ -7,3 +7,7 @@ export const register = (data) => {
 export const startSession = (data) => {
   return service.post('/psychological-chat/session/start', data)
 }
+
+export const getSessionList = (params) => {
+  return service.get(`/psychological-chat/sessions`, { params })
+}
