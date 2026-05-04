@@ -11,3 +11,11 @@ export const startSession = (data) => {
 export const getSessionList = (params) => {
   return service.get(`/psychological-chat/sessions`, { params })
 }
+
+export const deleteSession = (sessionId) => {
+  return service.delete(`/psychological-chat/sessions/${sessionId}`)
+}
+
+export const getMessageDetail = (sessionId) => {
+  return service.get(`/psychological-chat/sessions/${sessionId}/messages`)
+}
