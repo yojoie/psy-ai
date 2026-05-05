@@ -21,5 +21,5 @@ export const getMessageDetail = (sessionId) => {
 }
 
 export const getSessionEmotion = (sessionId) => {
-  return service.get(`/psychological-chat/sessions/${sessionId}/emotion`)
+  return service.get(`/psychological-chat/session/${sessionId}/emotion`)
 }
