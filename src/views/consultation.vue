@@ -1,7 +1,7 @@
 <template>
   <div class="consultation-container">
     <div class="sidebar">
-      <!-- AI助手 -->
+        <!-- AI助手 -->
         <div class="ai-assistant-info">
           <div class="breathing-circle">
             <el-image :src="iconUrl" style="width: 25px; height: 25px;"/>
@@ -12,6 +12,53 @@
             在线服务中
           </div>
         </div>
+        <!-- 情绪分析 -->
+        <div class="emotion-garden">
+          <div class="garden-header">
+            <div class="garden-title">情绪花园</div>
+          </div>
+          <div class="emotion-info">
+            <div class="emotion-name">{{ currentEmotion.primaryEmotion }}</div>
+            <div class="emotion-score">{{ currentEmotion.emotionScore }}</div>
+          </div>
+          <div class="warm-tips">
+            <div class="emotion-status-text">
+                <span class="status-label">今天感觉</span>
+                <span class="status-emotion">{{ currentEmotion.isNegative ? '需要关注' : '很不错' }}</span>
+            </div>
+            <div class="emotion-intensity">
+                <span class="intensity-dots ">
+                    <span v-for="dot in 3"  class="dot" :class="{'active': getIntensityClass(currentEmotion.emotionScore)>=dot}"></span>
+                </span>
+                <div class="intensity-text">
+                    {{ getRiskText(currentEmotion.riskLevel) }}
+                </div>
+            </div>
+            <div class="warm-suggestion" v-if="currentEmotion.suggestion">
+                <div class="suggestion-icon">🥰</div>
+                <div class="suggestion-content">
+                    <div class="suggestion-title">小建议</div>
+                    <div class="suggestion-text">{{ currentEmotion.suggestion }}</div>
+                </div>
+            </div>
+            <div class="healing-actions" v-if="currentEmotion.improvementSuggestions.length>0">
+                <div class="actions-title">治愈小行动</div>
+                <div class="actions-list">
+                    <div v-for="action in currentEmotion.improvementSuggestions" :key="action" class="action-item">
+                        <div class="action-icon">✅</div>
+                        <div class="action-text">{{ action }}</div>  
+                    </div>
+                </div>
+                <div class="risk-notice" v-if="currentEmotion.riskLevel>1&&currentEmotion.isNegative">
+                    <div class="notice-icon">⚠️</div>
+                    <div class="notice-content">
+                        <div class="notice-title">温馨提示</div>
+                        <div class="notice-text">{{ currentEmotion.riskDescription }}</div>
+                    </div>  
+                </div>
+            </div>
+          </div>         
+        </div>
         <!-- 会话列表 -->
         <div class="session-history">
           <h4 class="session-title">会话历史</h4>
@@ -21,7 +68,7 @@
                 <div class="session-title">
                     <span>{{ session.sessionTitle }}</span>
                     <div class="session-meta">
-                        <span class="session-time">{{ session.startedAt }}</span>
+                        <span class="session-time">{{ formatSessionTime(session.startedAt) }}</span>
                     </div>
                     <div class="session-preview">
                         <span>{{ session.lastMessageContent }}</span>
@@ -91,7 +138,7 @@
           <div class="message-content">
             <div class="message-bubble">
               <!-- ai思考中 -->
-              <div v-if="msg.senderType===2&&isAiTyping&&!msg.content"  class="typing-indicator">
+              <div v-if="msg.senderType===2 && msg.id===typingMessageId && isAiTyping && !msg.content"  class="typing-indicator">
                 <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
               </div>
               <!-- ai错误提示 -->
@@ -101,7 +148,7 @@
               <!-- 用户正常消息 -->
               <p v-else-if="msg.content" v-html="formatMessageContent(msg.content)"></p>
             </div>
-            <div class="message-time">{{ msg.senderType===2&&isAiTyping?'正在输入中':msg.createdAt }}</div>
+            <div class="message-time">{{ msg.senderType===2 && msg.id===typingMessageId && isAiTyping ? '正在输入中' : formatMessageTime(msg.createdAt) }}</div>
           </div>
         </div>
       </div>
@@ -135,12 +182,13 @@
 
 <script setup>
 import {  ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { startSession, getSessionList, deleteSession, getMessageDetail } from '@/api/frontend'
+import { ElMessage} from 'element-plus'
+import { startSession, getSessionList, deleteSession, getMessageDetail, getSessionEmotion } from '@/api/frontend'
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 
 const isAiTyping = ref(false)
+const typingMessageId = ref('')
 const iconUrl =new URL('@/assets/images/robot-fill.png', import.meta.url).href
 const iconUrl1 =new URL('@/assets/images/like.png', import.meta.url).href
 const iconUrl2 =new URL('@/assets/images/users.png', import.meta.url).href
@@ -152,9 +200,58 @@ const currentSession = ref(null)
 const sessionList = ref([])
 //定义对话消息
 const messageList= ref([])
+//情绪花园
+const currentEmotion = ref({
+    primaryEmotion:'中性',
+    emotionScore:50,
+    isNegative:false,
+    riskLevel:0,
+    suggestion:'状态正常，保持现状~',
+    improvementSuggestions:[]
+})
+//获取情绪花园数据
+const loadSessionEmotion=(sessionId) => {
+    const id=sessionId.toString().startsWith('session_')?sessionId:`session_${sessionId}`
+    getSessionEmotion(id).then(res=>{
+        currentEmotion.value=res
+    })
+}
+//获取情绪强度类名
+const getIntensityClass = (score) => {
+    //根据情绪强度返回不同的类名
+    if(score>=61){
+        return 3
+    }
+    if(score>=31){
+        return 2
+    }
+    return 1
+}
+//获取情绪强度文本
+const getRiskText = (level) => {
+    //根据情绪强度返回不同的文本
+    switch(level){
+        case 0:
+            return '正常'
+        case 1:
+            return '关注'
+        case 2:
+            return '预警'
+        case 3:
+            return '危机'
+        default:
+            return '正常'
+    }
+}
+
+
 
 //新建前端临时会话
 const createNewFrontendSession = () => {
+  isAiTyping.value = false
+  typingMessageId.value = ''
+  messageList.value = []
+  userMessage.value = ''
   //新建新会话对象
   const newSession = {
     sessionId:`temp_${Date.now()}`,
@@ -262,6 +359,7 @@ const startAiResponse = (sessionId,userMessage) => {
         content:'',
         createdAt:new Date().toISOString()
     }
+    typingMessageId.value = aiMessage.id
     //将ai消息占位符添加到messageList
     messageList.value.push(aiMessage)
     //结束流式请求
@@ -299,6 +397,8 @@ const startAiResponse = (sessionId,userMessage) => {
                 //将isAiTyping设置为false
                 isAiTyping.value = false
                 ctrl.abort()
+                //开始情绪分析
+             loadSessionEmotion(currentSession.value.sessionId)
                 return
             }
             const payload = JSON.parse(raw)
@@ -316,6 +416,7 @@ const startAiResponse = (sessionId,userMessage) => {
         },
         onclose:() => {
             //开始情绪分析
+           loadSessionEmotion(currentSession.value.sessionId)
         }
     })
 }
@@ -329,6 +430,7 @@ const handleError = (error) => {
     }
     //将isAiTyping设置为false
     isAiTyping.value = false
+    typingMessageId.value = ''
     //提示错误信息
     ElMessage.error(error)
 }
@@ -347,15 +449,19 @@ const getSessionPage = () => {
 
 //处理会话点击事件
 const handleSessionClick = (session) => {
+    isAiTyping.value = false
+    typingMessageId.value = ''
     //调用获取会话消息详情接口
     getMessageDetail(session.id).then(res => {
         //将后端返回的会话消息详情赋值给messageList
         console.log(res)
         messageList.value = res
     })
+    //获取情绪花园数据
+   // loadSessionEmotion(session.id)
     //更新当前会话对象数据
     const sessionData={
-        sessionId:'session_'+session.id,
+        sessionId:session.sessionId || session.id,
         status:'ACTIVE',
         sessionTitle:session.sessionTitle
     }
@@ -378,6 +484,21 @@ const handleDeleteClick = (session) => {
 const formatMessageContent = (content) => {
     return content.replace(/\n/g, '<br>')
 }
+
+const formatFullDateTime = (time) => {
+    if (!time) return ''
+    const date = new Date(time)
+    if (Number.isNaN(date.getTime())) return String(time)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hour = String(date.getHours()).padStart(2, '0')
+    const minute = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hour}:${minute}`
+}
+
+const formatMessageTime = (time) => formatFullDateTime(time)
+const formatSessionTime = (time) => formatFullDateTime(time)
 
 onMounted(() => {
     //获取会话列表
