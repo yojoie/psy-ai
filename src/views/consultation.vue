@@ -68,7 +68,7 @@
                 <div class="session-title">
                     <span>{{ session.sessionTitle }}</span>
                     <div class="session-meta">
-                        <span class="session-time">{{ formatSessionTime(session.startedAt) }}</span>
+                       <span class="session-time">{{ session.startedAt }}</span>
                     </div>
                     <div class="session-preview">
                         <span>{{ session.lastMessageContent }}</span>
@@ -138,7 +138,7 @@
           <div class="message-content">
             <div class="message-bubble">
               <!-- ai思考中 -->
-              <div v-if="msg.senderType===2 && msg.id===typingMessageId && isAiTyping && !msg.content"  class="typing-indicator">
+              <div v-if="msg.senderType===2&&isAiTyping&&!msg.content"  class="typing-indicator">
                 <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
               </div>
               <!-- ai错误提示 -->
@@ -148,7 +148,7 @@
               <!-- 用户正常消息 -->
               <p v-else-if="msg.content" v-html="formatMessageContent(msg.content)"></p>
             </div>
-            <div class="message-time">{{ msg.senderType===2 && msg.id===typingMessageId && isAiTyping ? '正在输入中' : formatMessageTime(msg.createdAt) }}</div>
+           <div class="message-time">{{ msg.senderType===2&&isAiTyping?'正在输入中':msg.createdAt }}</div>
           </div>
         </div>
       </div>
@@ -359,7 +359,6 @@ const startAiResponse = (sessionId,userMessage) => {
         content:'',
         createdAt:new Date().toISOString()
     }
-    typingMessageId.value = aiMessage.id
     //将ai消息占位符添加到messageList
     messageList.value.push(aiMessage)
     //结束流式请求
@@ -398,7 +397,7 @@ const startAiResponse = (sessionId,userMessage) => {
                 isAiTyping.value = false
                 ctrl.abort()
                 //开始情绪分析
-             loadSessionEmotion(currentSession.value.sessionId)
+            // loadSessionEmotion(currentSession.value.sessionId)
                 return
             }
             const payload = JSON.parse(raw)
@@ -416,7 +415,7 @@ const startAiResponse = (sessionId,userMessage) => {
         },
         onclose:() => {
             //开始情绪分析
-           loadSessionEmotion(currentSession.value.sessionId)
+          // loadSessionEmotion(currentSession.value.sessionId)
         }
     })
 }
@@ -430,7 +429,6 @@ const handleError = (error) => {
     }
     //将isAiTyping设置为false
     isAiTyping.value = false
-    typingMessageId.value = ''
     //提示错误信息
     ElMessage.error(error)
 }
@@ -449,8 +447,6 @@ const getSessionPage = () => {
 
 //处理会话点击事件
 const handleSessionClick = (session) => {
-    isAiTyping.value = false
-    typingMessageId.value = ''
     //调用获取会话消息详情接口
     getMessageDetail(session.id).then(res => {
         //将后端返回的会话消息详情赋值给messageList
@@ -458,10 +454,10 @@ const handleSessionClick = (session) => {
         messageList.value = res
     })
     //获取情绪花园数据
-   // loadSessionEmotion(session.id)
+    loadSessionEmotion(session.id)
     //更新当前会话对象数据
     const sessionData={
-        sessionId:session.sessionId || session.id,
+        sessionId:'session_'+session.id,
         status:'ACTIVE',
         sessionTitle:session.sessionTitle
     }
@@ -485,20 +481,7 @@ const formatMessageContent = (content) => {
     return content.replace(/\n/g, '<br>')
 }
 
-const formatFullDateTime = (time) => {
-    if (!time) return ''
-    const date = new Date(time)
-    if (Number.isNaN(date.getTime())) return String(time)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hour = String(date.getHours()).padStart(2, '0')
-    const minute = String(date.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day} ${hour}:${minute}`
-}
 
-const formatMessageTime = (time) => formatFullDateTime(time)
-const formatSessionTime = (time) => formatFullDateTime(time)
 
 onMounted(() => {
     //获取会话列表
