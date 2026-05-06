@@ -344,15 +344,12 @@ const startNewSession = async (message) => {
   }
 }
 
-const startAiResponse = (sessionId,userMessage) => {
-    //防止重复发送
+const startAiResponse = (initialSessionId, userMessage) => {
     if(isAiTyping.value) {
         ElMessage.error('思考中，请稍后再发送')
         return
     }
-    //将isAiTyping设置为true
     isAiTyping.value = true
-    //创建ai消息占位符
     const aiMessage = {
         id:`ai_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
         senderType:2,
@@ -360,65 +357,102 @@ const startAiResponse = (sessionId,userMessage) => {
         createdAt:new Date().toISOString()
     }
     typingMessageId.value = aiMessage.id
-    //将ai消息占位符添加到messageList
     messageList.value.push(aiMessage)
-    //结束流式请求
-    const ctrl= new AbortController()
-    //调用流式接口
-    fetchEventSource('/api/psychological-chat/stream',{
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json',
-            'Token':localStorage.getItem('token'),
-            'Accept':'text/event-stream'
-        },
-        body:JSON.stringify({
-            sessionId,
-            userMessage
-        }),
-        signal:ctrl.signal,
-        onopen:(response) => {
-            console.log(response)
-            if(response.headers.get('Content-Type') !== 'text/event-stream') {
-                ElMessage.success('流式接口调用失败')
-                return
-            }
-        },
-        onmessage:(event) => {
-            //raw接收返回的字段（去空格）
-            const raw = event.data.trim()
-            if(!raw) return
-            //eventName接收事件名（done表示传输字段结束）
-            const eventName= event.event
-            //获取当前ai消息（最后一个数据）
-            const aiMessage = messageList.value[messageList.value.length - 1]
-            //如果事件名是done，说明是数据流结束，终止流式请求
-            if(eventName === 'done') {
-                //将isAiTyping设置为false
+
+    let triedAlternate = false
+
+    const doStream = (sid) => {
+        const ctrl = new AbortController()
+        fetchEventSource('/api/psychological-chat/stream', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Token': localStorage.getItem('token') || '',
+                'Accept': 'text/event-stream'
+            },
+            body: JSON.stringify({ sessionId: String(sid), userMessage }),
+            signal: ctrl.signal,
+            onopen: async (response) => {
+                if (response.ok && response.headers.get('content-type')?.includes('text/event-stream')) {
+                    return // 成功
+                }
+                let errText = '流式接口调用失败'
+                try {
+                    const errData = await response.json()
+                    errText = errData.message || errData.msg || errText
+                } catch(e) {}
+                throw new Error(errText)
+            },
+            onmessage: (event) => {
+                const raw = event.data.trim()
+                if (!raw) return
+                const eventName = event.event
+                const currentAiMsg = messageList.value.find(m => m.id === typingMessageId.value) || messageList.value[messageList.value.length - 1]
+                
+                if (eventName === 'done') {
+                    isAiTyping.value = false
+                    typingMessageId.value = ''
+                    ctrl.abort()
+                    loadSessionEmotion(currentSession.value.sessionId)
+                    return
+                }
+                try {
+                    const payload = JSON.parse(raw)
+                    const ok = String(payload.code) === '200' || String(payload.code) === '0' || payload.code === undefined
+                    if (ok) {
+                        // 兼容多种后端可能的数据结构
+                        let chunk = ''
+                        if (payload.data && typeof payload.data.content === 'string') {
+                            chunk = payload.data.content
+                        } else if (payload.data && typeof payload.data === 'string') {
+                            chunk = payload.data
+                        } else if (typeof payload.content === 'string') {
+                            chunk = payload.content
+                        } else if (typeof payload.text === 'string') {
+                            chunk = payload.text
+                        } else if (typeof payload.message === 'string') {
+                            chunk = payload.message
+                        } else {
+                            // 如果都没匹配上，为了防止为空，强行 stringify data 或 payload
+                            chunk = payload.data ? JSON.stringify(payload.data) : JSON.stringify(payload)
+                        }
+                        currentAiMsg.content += chunk
+                    } else {
+                        // 如果后端明确返回了非 200/0 的 code（比如 500），强制终止并显示错误
+                        currentAiMsg.content = payload.message || payload.msg || '对话服务异常: 系统繁忙，请稍后重试'
+                        isAiTyping.value = false
+                        typingMessageId.value = ''
+                        ctrl.abort()
+                    }
+                } catch (e) {
+                    // 如果不是 JSON，或者是纯文本流，直接拼接
+                    if (e instanceof SyntaxError) {
+                        currentAiMsg.content += raw
+                    } else {
+                        console.error('解析消息异常:', e)
+                    }
+                }
+            },
+            onerror: (err) => {
+                if (!triedAlternate) {
+                    triedAlternate = true
+                    const altSid = String(sid).startsWith('session_') ? String(sid).replace('session_', '') : `session_${sid}`
+                    console.log(`流式调用失败，尝试备用 ID: ${altSid}`)
+                    doStream(altSid)
+                } else {
+                    handleError(err.message || err || '回复失败')
+                }
+                throw err // 抛出异常阻止 fetchEventSource 默认无限重试
+            },
+            onclose: () => {
                 isAiTyping.value = false
-                ctrl.abort()
-                //开始情绪分析
+                typingMessageId.value = ''
                 loadSessionEmotion(currentSession.value.sessionId)
-                return
             }
-            const payload = JSON.parse(raw)
-            const ok=String(payload.code)==='200'
-            if(ok&&payload.data&&payload.data.content) {
-                aiMessage.content += payload.data.content
-            }else if(!ok) {
-                //错误处理函数
-                handleError(payload.message||'回复失败')
-            }
-        },
-        onerror:(err) => {
-            handleError(err||'回复失败')
-            throw err
-        },
-        onclose:() => {
-            //开始情绪分析
-            loadSessionEmotion(currentSession.value.sessionId)
-        }
-    })
+        })
+    }
+
+    doStream(initialSessionId)
 }
 
 //接收错误提示
@@ -455,10 +489,22 @@ const handleSessionClick = (session) => {
     getMessageDetail(session.id).then(res => {
         //将后端返回的会话消息详情赋值给messageList
         console.log(res)
-        messageList.value = res
+        if (Array.isArray(res)) {
+            messageList.value = res
+        } else if (res && Array.isArray(res.records)) {
+            messageList.value = res.records
+        } else if (res && Array.isArray(res.list)) {
+            messageList.value = res.list
+        } else if (res && Array.isArray(res.data)) {
+            messageList.value = res.data
+        } else {
+            messageList.value = []
+        }
+    }).catch(() => {
+        messageList.value = []
     })
     //获取情绪花园数据
-   loadSessionEmotion(session.id)
+    loadSessionEmotion(session.id)
     //更新当前会话对象数据
     const sessionData={
         sessionId:session.sessionId || session.id,
