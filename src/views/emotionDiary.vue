@@ -19,21 +19,124 @@
       </div>
       <!-- 主要情绪 -->
       <div class="diary-card">
-        
+        <div class="title">主要情绪</div>
+        <div class="emotion-grid">
+          <div v-for="item in emotionOptions" :key="item.name" class="emotion-card" :class="{'selected':item.name==diaryForm.dominantEmotion}" @click="selectEmotion(item.name)">
+            <el-image  :src="item.url"   style="width: 50px; height: 50px;"/>
+            <div class="emotion-name">{{item.name}}</div>
+          </div>
+        </div>
       </div>
       <!-- 情绪记录 -->
       <div class="diary-card">
-        
+        <div class="title">详细记录</div>
+        <div class="detail-form">
+          <div class="form-group">
+            <div class="form-label">情绪触发因素</div>
+            <el-input v-model="diaryForm.emotionTriggers" placeholder="请输入情绪触发因素" type="textarea" :rows="3" maxLength="1000" show-word-limit />
+            <div class="form-label">今日感想</div>
+            <el-input v-model="diaryForm.diaryContent" placeholder="请输入今日感想" type="textarea" :rows="5" maxLength="2000" show-word-limit />                  
+          </div>
+          <div class="life-indicators">
+              <div class="indicator-group">
+                <div class="form-label">睡眠质量</div>
+                <el-select v-model="diaryForm.sleepQuality" placeholder="请选择" type="select">
+                  <el-option label="很差" :value="1" />
+                  <el-option label="较差" :value="2" />
+                  <el-option label="一般" :value="3" />
+                  <el-option label="良好" :value="4" />
+                  <el-option label="优秀" :value="5" />
+                </el-select>
+              </div>
+              <div class="indicator-group">
+                <div class="form-label">压力水平</div>
+                <el-select v-model="diaryForm.stressLevel" placeholder="请选择" type="select">
+                  <el-option label="很低" :value="1" />
+                  <el-option label="较低" :value="2" />
+                  <el-option label="中等" :value="3" />
+                  <el-option label="较高" :value="4" />
+                  <el-option label="很高" :value="5" />
+                </el-select>
+              </div>
+          </div>
+        </div> 
       </div>
+      <!-- 提交按钮 -->
+        <div class="action-buttons">
+          <el-button  @click="resetForm">重置</el-button>
+          <el-button type="primary" @click="submit">提交</el-button>
+        </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { reactive } from 'vue';
-import { dayjs } from 'element-plus';
+import { dayjs,ElMessage } from 'element-plus'; 
+import { addEmotionDairy } from '@/api/frontend'
 
+//评分选项
 const emotionStatus = ['绝望崩溃','消沉抑郁','焦虑烦躁','低落不悦','平静淡然','轻松惬意','愉悦舒服','欢欣满足','兴奋欣喜','极致幸福']
+
+//情绪选项
+const emotionOptions = [
+  {name:'开心',url:new URL('@/assets/images/开心.png',import.meta.url).href},
+  {name:'平静',url:new URL('@/assets/images/平静.png',import.meta.url).href},
+  {name:'焦虑',url:new URL('@/assets/images/焦虑.png',import.meta.url).href},
+  {name:'悲伤',url:new URL('@/assets/images/悲伤.png',import.meta.url).href},
+  {name:'兴奋',url:new URL('@/assets/images/兴奋.png',import.meta.url).href},
+  {name:'疲惫',url:new URL('@/assets/images/疲惫.png',import.meta.url).href},
+  {name:'惊讶',url:new URL('@/assets/images/惊讶.png',import.meta.url).href},
+  {name:'困惑',url:new URL('@/assets/images/困惑.png',import.meta.url).href},
+]
+
+//选择情绪
+const selectEmotion=(emotion)=>{
+  diaryForm.dominantEmotion=emotion
+}
+
+const resetForm=()=>{
+  Object.assign(diaryForm,{diaryDate:dayjs().format('YYYY-MM-DD'),
+  moodScore:null,
+  dominantEmotion:'',
+  emotionTriggers:'',
+  diaryContent:'',
+  sleepQuality:null,
+  stressLevel:null,
+})
+}
+
+const submit=()=>{
+  if(!diaryForm.moodScore){
+    ElMessage.error('请选择情绪')
+    return
+  }
+  if(!diaryForm.dominantEmotion){
+    ElMessage.error('请选择主要情绪')
+    return
+  }
+  if(!diaryForm.emotionTriggers){
+    ElMessage.error('请输入情绪触发因素')
+    return
+  }
+  if(!diaryForm.diaryContent){
+    ElMessage.error('请输入今日感想')
+    return
+  }
+  if(!diaryForm.sleepQuality){
+    ElMessage.error('请选择睡眠质量')
+    return
+  }
+  if(!diaryForm.stressLevel){
+    ElMessage.error('请选择压力水平')
+    return
+  }
+  addEmotionDairy(diaryForm).then(res=>{
+      ElMessage.success('提交成功')
+      resetForm()
+  })
+}
+
 const diaryForm=reactive({
     diaryDate: dayjs().format('YYYY-MM-DD'),
     moodScore:null,
@@ -120,6 +223,10 @@ const iconUrl=new URL('@/assets/images/like.png',import.meta.url).href
                     }
                 }
                 .action-buttons {
+                  /* 按钮靠右侧 */
+                  display: flex;
+                  justify-content: flex-end;
+                    gap: 10px;
                     margin-top: 40px
                 }
             }
