@@ -165,6 +165,30 @@ target: 'http://159.75.169.224:1235'
 | 咨询记录 | `/back/consultations` |
 | 情绪日志 | `/back/emotional` |
 
+## 项目截图
+### 未登录首页
+
+![未登录首页](./screenshots/home.png)
+### 用户端首页
+
+![用户端首页](./screenshots/user-home.png)
+
+### AI 流式对话
+
+![AI 流式对话](./screenshots/chat.png)
+
+### 管理端文章管理
+
+![管理端文章管理](./screenshots/admin-articles.png)
+
+### 数据看板
+
+![数据看板](./screenshots/dashboard.png)
+
+### 富文本编辑
+
+![富文本编辑](./screenshots/editor.png)
+
 ## 当前项目特点
 
 - 前后台一体化路由架构
@@ -187,5 +211,4 @@ target: 'http://159.75.169.224:1235'
 - 增加组件单元测试和路由守卫测试
 - 优化大体积打包产物，做按需拆包
 - 完善 README 中的部署说明与接口文档
-
 
